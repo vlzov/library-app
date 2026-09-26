@@ -1,0 +1,47 @@
+services:
+
+  service:
+    build:
+      context: ./service
+    container_name: library-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - library-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  api-gateway:
+    build:
+      context: ./gateway
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICE_URL: http://service:8081
+    depends_on:
+      service:
+        condition: service_started
+    networks:
+      - library-net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: library-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - library-net
+
+networks:
+  library-net:
+    driver: bridge
